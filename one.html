@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>等待有一說一出影片</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f0f14;
+      color: #eaeaf0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      text-align: center;
+      padding: 32px 40px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      letter-spacing: 1px;
+    }
+    .time {
+      font-size: 20px;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>等待有一說一出影片</h1>
+    <div class="time" id="timer"></div>
+  </div>
+
+  <script>
+    const startTime = new Date('2026-01-07T00:00:00');
+
+    function updateTimer() {
+      const now = new Date();
+      let diff = Math.floor((now - startTime) / 1000);
+
+      if (diff < 0) {
+        document.getElementById('timer').innerText = '尚未開始計時';
+        return;
+      }
+
+      const days = Math.floor(diff / 86400);
+      diff %= 86400;
+      const hours = Math.floor(diff / 3600);
+      diff %= 3600;
+      const minutes = Math.floor(diff / 60);
+      const seconds = diff % 60;
+
+      document.getElementById('timer').innerHTML =
+        `自 2026 年 1 月 7 日 起已過<br>` +
+        `${days} 天 ${hours} 小時 ${minutes} 分 ${seconds} 秒`;
+    }
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
+  </script>
+</body>
+</html>
