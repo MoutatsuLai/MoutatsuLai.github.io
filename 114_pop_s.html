@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>人口年齡分佈圖（114年）</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#0f1a33;
+      --grid:rgba(255,255,255,.08);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+      --male:#60a5fa;   /* blue */
+      --female:#f472b6; /* pink */
+      --total:#a78bfa;  /* purple */
+      --axis:rgba(255,255,255,.35);
+    }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+      background: linear-gradient(180deg, var(--bg), #070b14);
+      color:var(--text);
+    }
+    .wrap{
+      max-width: 1200px;
+      margin: 18px auto 28px;
+      padding: 0 14px;
+    }
+    header{
+      display:flex;
+      gap:12px;
+      align-items:flex-end;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    h1{
+      font-size: 18px;
+      margin:0;
+      font-weight:700;
+      letter-spacing:.5px;
+    }
+    .sub{
+      font-size: 12px;
+      color:var(--muted);
+      margin-top:6px;
+      line-height: 1.4;
+    }
+    .panel{
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:6px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      padding: 8px 10px;
+      border-radius: 12px;
+    }
+    select,input[type="range"]{
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 10px;
+      padding: 4px 8px;
+      outline:none;
+    }
+    select option{ background:#0b1220; color:var(--text); }
+
+    .chart-wrap{
+      position:relative;
+      height: 640px;
+      width: 100%;
+    }
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+      border-radius: 12px;
+      background: radial-gradient(900px 380px at 20% 10%, rgba(167,139,250,.10), transparent 55%),
+                  radial-gradient(900px 380px at 80% 10%, rgba(96,165,250,.08), transparent 60%),
+                  rgba(255,255,255,.02);
+    }
+    .tooltip{
+      position:absolute;
+      pointer-events:none;
+      background: rgba(10,15,30,.92);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      transform: translate(-50%, calc(-100% - 10px));
+      display:none;
+      white-space: nowrap;
+      box-shadow: 0 12px 26px rgba(0,0,0,.35);
+    }
+    .legend{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      display:inline-block;
+      margin-right:6px;
+    }
+    footer{
+      margin-top:10px;
+      font-size:12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .kpi{ color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>人口年齡分佈圖（114年）｜直向柱狀圖</h1>
+        <div class="sub">
+          X 軸：年齡（0～100+）｜Y 軸：人口數（人）<br/>
+          可切換顯示：合計 / 男 / 女
+        </div>
+      </div>
+      <div class="controls">
+        <label>
+          觀察系列
+          <select id="series">
+            <option value="total" selected>合計</option>
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+        </label>
+        <label>
+          柱寬
+          <input id="barW" type="range" min="2" max="16" value="8" />
+        </label>
+      </div>
+    </header>
+
+    <div class="panel">
+      <div class="chart-wrap">
+        <canvas id="c"></canvas>
+        <div class="tooltip" id="tip"></div>
+      </div>
+
+      <div class="legend" id="legend"></div>
+
+      <footer id="footer"></footer>
+    </div>
+  </div>
+
+<script>
+/** 原始資料（由題目提供） */
+const data = [
+  {age:"0歲", male: 8226, female: 7729, total: 15955},
+  {age:"1歲", male: 10667, female: 10156, total: 20823},
+  {age:"2歲", male: 10946, female: 10281, total: 21227},
+  {age:"3歲", male: 11656, female: 10954, total: 22610},
+  {age:"4歲", male: 13185, female: 12513, total: 25698},
+  {age:"5歲", male: 13598, female: 12790, total: 26388},
+  {age:"6歲", male: 15033, female: 14087, total: 29120},
+  {age:"7歲", male: 15403, female: 14590, total: 29993},
+  {age:"8歲", male: 16485, female: 15778, total: 32263},
+  {age:"9歲", male: 17851, female: 16712, total: 34563},
+  {age:"10歲", male: 18384, female: 17037, total: 35421},
+  {age:"11歲", male: 18013, female: 16994, total: 35007},
+  {age:"12歲", male: 16932, female: 15669, total: 32601},
+  {age:"13歲", male: 20393, female: 19147, total: 39540},
+  {age:"14歲", male: 17326, female: 16361, total: 33687},
+  {age:"15歲", male: 14888, female: 13640, total: 28528},
+  {age:"16歲", male: 17231, female: 15877, total: 33108},
+  {age:"17歲", male: 17565, female: 16040, total: 33605},
+  {age:"18歲", male: 18030, female: 16642, total: 34672},
+  {age:"19歲", male: 18384, female: 16715, total: 35099},
+  {age:"20歲", male: 17782, female: 16537, total: 34319},
+  {age:"21歲", male: 19233, female: 17162, total: 36395},
+  {age:"22歲", male: 19845, female: 17856, total: 37701},
+  {age:"23歲", male: 21203, female: 19502, total: 40705},
+  {age:"24歲", male: 22225, female: 20356, total: 42581},
+  {age:"25歲", male: 26655, female: 24661, total: 51316},
+  {age:"26歲", male: 24492, female: 22765, total: 47257},
+  {age:"27歲", male: 22910, female: 21531, total: 44441},
+  {age:"28歲", male: 27749, female: 25952, total: 53701},
+  {age:"29歲", male: 27676, female: 25737, total: 53413},
+  {age:"30歲", male: 28064, female: 26532, total: 54596},
+  {age:"31歲", male: 27988, female: 26531, total: 54519},
+  {age:"32歲", male: 28881, female: 26929, total: 55810},
+  {age:"33歲", male: 28734, female: 26812, total: 55546},
+  {age:"34歲", male: 28727, female: 26569, total: 55296},
+  {age:"35歲", male: 30315, female: 28256, total: 58571},
+  {age:"36歲", male: 27696, female: 26383, total: 54079},
+  {age:"37歲", male: 30235, female: 29257, total: 59492},
+  {age:"38歲", male: 27293, female: 26841, total: 54134},
+  {age:"39歲", male: 26249, female: 26373, total: 52622},
+  {age:"40歲", male: 30068, female: 30049, total: 60117},
+  {age:"41歲", male: 32213, female: 32642, total: 64855},
+  {age:"42歲", male: 33141, female: 33872, total: 67013},
+  {age:"43歲", male: 35109, female: 36571, total: 71680},
+  {age:"44歲", male: 35931, female: 37577, total: 73508},
+  {age:"45歲", male: 35566, female: 37283, total: 72849},
+  {age:"46歲", male: 36520, female: 38310, total: 74830},
+  {age:"47歲", male: 35482, female: 37566, total: 73048},
+  {age:"48歲", male: 33145, female: 35624, total: 68769},
+  {age:"49歲", male: 36518, female: 38608, total: 75126},
+  {age:"50歲", male: 30652, female: 33503, total: 64155},
+  {age:"51歲", male: 30377, female: 32901, total: 63278},
+  {age:"52歲", male: 29841, female: 32484, total: 62325},
+  {age:"53歲", male: 29264, female: 32100, total: 61364},
+  {age:"54歲", male: 29821, female: 32828, total: 62649},
+  {age:"55歲", male: 30123, female: 33483, total: 63606},
+  {age:"56歲", male: 29784, female: 33637, total: 63421},
+  {age:"57歲", male: 29074, female: 33374, total: 62448},
+  {age:"58歲", male: 27583, female: 31468, total: 59051},
+  {age:"59歲", male: 28773, female: 33972, total: 62745},
+  {age:"60歲", male: 28751, female: 34124, total: 62875},
+  {age:"61歲", male: 29022, female: 34240, total: 63262},
+  {age:"62歲", male: 29487, female: 35296, total: 64783},
+  {age:"63歲", male: 28654, female: 34154, total: 62808},
+  {age:"64歲", male: 27945, female: 33029, total: 60974},
+  {age:"65歲", male: 27526, female: 33035, total: 60561},
+  {age:"66歲", male: 27020, female: 32971, total: 59991},
+  {age:"67歲", male: 26258, female: 31962, total: 58220},
+  {age:"68歲", male: 24212, female: 30009, total: 54221},
+  {age:"69歲", male: 25416, female: 30933, total: 56349},
+  {age:"70歲", male: 24740, female: 29857, total: 54597},
+  {age:"71歲", male: 22322, female: 27969, total: 50291},
+  {age:"72歲", male: 21469, female: 26632, total: 48101},
+  {age:"73歲", male: 20444, female: 25578, total: 46022},
+  {age:"74歲", male: 20134, female: 24872, total: 45006},
+  {age:"75歲", male: 16348, female: 20389, total: 36737},
+  {age:"76歲", male: 14683, female: 18333, total: 33016},
+  {age:"77歲", male: 11969, female: 15189, total: 27158},
+  {age:"78歲", male: 10342, female: 13104, total: 23446},
+  {age:"79歲", male: 7625, female: 9917, total: 17542},
+  {age:"80歲", male: 6405, female: 8416, total: 14821},
+  {age:"81歲", male: 6969, female: 9200, total: 16169},
+  {age:"82歲", male: 6469, female: 9002, total: 15471},
+  {age:"83歲", male: 5527, female: 8126, total: 13653},
+  {age:"84歲", male: 5106, female: 7518, total: 12624},
+  {age:"85歲", male: 4404, female: 6978, total: 11382},
+  {age:"86歲", male: 3536, female: 6013, total: 9549},
+  {age:"87歲", male: 2809, female: 4920, total: 7729},
+  {age:"88歲", male: 2392, female: 4282, total: 6674},
+  {age:"89歲", male: 1910, female: 3535, total: 5445},
+  {age:"90歲", male: 1613, female: 3071, total: 4684},
+  {age:"91歲", male: 1233, female: 2390, total: 3623},
+  {age:"92歲", male: 1115, female: 1898, total: 3013},
+  {age:"93歲", male: 1004, female: 1523, total: 2527},
+  {age:"94歲", male: 845, female: 1225, total: 2070},
+  {age:"95歲", male: 761, female: 956, total: 1717},
+  {age:"96歲", male: 590, female: 731, total: 1321},
+  {age:"97歲", male: 431, female: 526, total: 957},
+  {age:"98歲", male: 291, female: 413, total: 704},
+  {age:"99歲", male: 206, female: 276, total: 482},
+  {age:"100歲以上", male: 503, female: 514, total: 1017},
+];
+
+const totalsRow = { male: 1961619, female: 2083212, total: 4044831 };
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const tip = document.getElementById('tip');
+const sel = document.getElementById('series');
+const barW = document.getElementById('barW');
+const legend = document.getElementById('legend');
+const footer = document.getElementById('footer');
+
+function fmt(n){ return n.toLocaleString('en-US'); }
+
+function colorFor(series){
+  const s = getComputedStyle(document.documentElement);
+  if(series==='male') return s.getPropertyValue('--male').trim();
+  if(series==='female') return s.getPropertyValue('--female').trim();
+  return s.getPropertyValue('--total').trim();
+}
+
+function resize(){
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
+  draw();
+}
+
+let bars = []; // for hover hit-test in CSS pixel coords
+
+function draw(){
+  const series = sel.value;
+  const W = canvas.getBoundingClientRect().width;
+  const H = canvas.getBoundingClientRect().height;
+
+  ctx.clearRect(0,0,W,H);
+
+  // padding
+  const pad = {l: 56, r: 18, t: 18, b: 56};
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+
+  // data range
+  const values = data.map(d => d[series]);
+  const maxV = Math.max(...values);
+  const niceMax = niceCeil(maxV);
+
+  // grid & axes
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  const axisColor = getComputedStyle(document.documentElement).getPropertyValue('--axis').trim();
+  const textMuted = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+
+  // y ticks
+  const ticks = 6;
+  ctx.lineWidth = 1;
+
+  for(let i=0;i<=ticks;i++){
+    const y = pad.t + plotH * (i/ticks);
+    // horizontal grid
+    ctx.strokeStyle = gridColor;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(pad.l + plotW, y);
+    ctx.stroke();
+
+    // tick label
+    const val = niceMax * (1 - i/ticks);
+    ctx.fillStyle = textMuted;
+    ctx.font = '12px system-ui, -apple-system, "Noto Sans TC", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fmt(Math.round(val)), pad.l - 8, y);
+  }
+
+  // axes
+  ctx.strokeStyle = axisColor;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t);
+  ctx.lineTo(pad.l, pad.t + plotH);
+  ctx.lineTo(pad.l + plotW, pad.t + plotH);
+  ctx.stroke();
+
+  // bars
+  const n = data.length;
+  const bw = Number(barW.value);               // desired bar width
+  const gap = 2;                               // fixed gap
+  const step = bw + gap;
+  const totalWidth = n * step - gap;
+
+  // if too wide, scale step down to fit
+  const scale = totalWidth > plotW ? (plotW / totalWidth) : 1;
+  const step2 = step * scale;
+  const bw2 = bw * scale;
+  const gap2 = gap * scale;
+
+  const startX = pad.l + (plotW - (n*step2 - gap2))/2;
+
+  const fill = colorFor(series);
+  bars = [];
+
+  for(let i=0;i<n;i++){
+    const d = data[i];
+    const v = d[series];
+    const h = (v / niceMax) * plotH;
+    const x = startX + i*step2;
+    const y = pad.t + plotH - h;
+
+    // bar
+    const grad = ctx.createLinearGradient(0, y, 0, y+h);
+    grad.addColorStop(0, withAlpha(fill, 0.95));
+    grad.addColorStop(1, withAlpha(fill, 0.35));
+    ctx.fillStyle = grad;
+    roundRect(ctx, x, y, bw2, h, 4);
+    ctx.fill();
+
+    bars.push({x, y, w:bw2, h, d});
+  }
+
+  // x labels: show every 5 years + last (100+)
+  ctx.fillStyle = textMuted;
+  ctx.font = '12px system-ui, -apple-system, "Noto Sans TC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+
+  for(let i=0;i<n;i++){
+    const label = data[i].age;
+    const show = (label === '100歲以上') || (i % 5 === 0);
+    if(!show) continue;
+    const x = startX + i*step2 + bw2/2;
+    const y = pad.t + plotH + 10;
+    ctx.fillText(label.replace('歲',''), x, y);
+  }
+
+  // axis titles
+  ctx.fillStyle = textColor;
+  ctx.font = '12px system-ui, -apple-system, "Noto Sans TC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('年齡（歲）', pad.l + plotW/2, H - 8);
+
+  ctx.save();
+  ctx.translate(14, pad.t + plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('人口數（人）', 0, 0);
+  ctx.restore();
+
+  // legend + footer
+  legend.innerHTML = `
+    <span><span class="dot" style="background:${colorFor('total')}"></span>合計</span>
+    <span><span class="dot" style="background:${colorFor('male')}"></span>男</span>
+    <span><span class="dot" style="background:${colorFor('female')}"></span>女</span>
+  `;
+
+  footer.innerHTML = `
+    <div>總計：男 <span class="kpi">${fmt(totalsRow.male)}</span> ／ 女 <span class="kpi">${fmt(totalsRow.female)}</span> ／ 合計 <span class="kpi">${fmt(totalsRow.total)}</span></div>
+    <div>目前顯示：<span class="kpi">${seriesLabel(series)}</span>（最大值刻度：約 ${fmt(niceMax)}）</div>
+  `;
+}
+
+function seriesLabel(s){
+  if(s==='male') return '男';
+  if(s==='female') return '女';
+  return '合計';
+}
+
+function niceCeil(x){
+  // nice number for axis max
+  const exp = Math.floor(Math.log10(x));
+  const base = Math.pow(10, exp);
+  const f = x / base;
+  let nf;
+  if(f <= 1) nf = 1;
+  else if(f <= 2) nf = 2;
+  else if(f <= 5) nf = 5;
+  else nf = 10;
+  return nf * base;
+}
+
+function withAlpha(hex, a){
+  // hex like #RRGGBB
+  const m = hex.replace('#','');
+  const r = parseInt(m.slice(0,2),16);
+  const g = parseInt(m.slice(2,4),16);
+  const b = parseInt(m.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.arcTo(x+w, y, x+w, y+h, rr);
+  ctx.arcTo(x+w, y+h, x, y+h, rr);
+  ctx.arcTo(x, y+h, x, y, rr);
+  ctx.arcTo(x, y, x+w, y, rr);
+  ctx.closePath();
+}
+
+// hover tooltip
+function onMove(ev){
+  const rect = canvas.getBoundingClientRect();
+  const mx = ev.clientX - rect.left;
+  const my = ev.clientY - rect.top;
+
+  const hit = bars.find(b => mx>=b.x && mx<=b.x+b.w && my>=b.y && my<=b.y+b.h);
+  if(!hit){
+    tip.style.display = 'none';
+    return;
+  }
+  const series = sel.value;
+  const d = hit.d;
+  tip.style.display = 'block';
+  tip.style.left = `${hit.x + hit.w/2}px`;
+  tip.style.top = `${hit.y}px`;
+  tip.innerHTML = `
+    <div><strong>${d.age}</strong></div>
+    <div>合計：${fmt(d.total)}</div>
+    <div>男：${fmt(d.male)} ／ 女：${fmt(d.female)}</div>
+    <div>目前系列（${seriesLabel(series)}）：<strong>${fmt(d[series])}</strong></div>
+  `;
+}
+
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('mouseleave', ()=> tip.style.display='none');
+sel.addEventListener('change', draw);
+barW.addEventListener('input', draw);
+window.addEventListener('resize', resize);
+
+resize();
+</script>
+</body>
+</html>
