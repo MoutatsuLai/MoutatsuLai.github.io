@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐍 貪食蛇踩地雷 💣</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            color: #fff;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .game-title {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00ff88, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .score-panel {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .score-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 70px;
+        }
+
+        .score-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .high-score .score-value {
+            color: #ffd700;
+        }
+
+        .mine-counter .score-value {
+            color: #ff6b6b;
+        }
+
+        .flag-counter .score-value {
+            color: #ff9f43;
+        }
+
+        #gameCanvas {
+            border-radius: 10px;
+            display: block;
+            background: #1a1a2e;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+            cursor: crosshair;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .speed-label {
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .speed-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .speed-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .speed-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .speed-btn.active {
+            background: linear-gradient(45deg, #00ff88, #00d4ff);
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-restart {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a5a);
+            color: #fff;
+        }
+
+        .btn-restart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-pause {
+            background: linear-gradient(45deg, #ffd700, #ffaa00);
+            color: #1a1a2e;
+        }
+
+        .btn-pause:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .game-info {
+            margin-top: 20px;
+            color: #888;
+            font-size: 12px;
+            text-align: center;
+            line-height: 2;
+        }
+
+        .game-info kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+
+        .game-info .highlight {
+            color: #ff9f43;
+            font-weight: bold;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: #fff;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 90%;
+        }
+
+        .modal h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .modal.game-over h2 {
+            color: #ff6b6b;
+        }
+
+        .modal.paused h2 {
+            color: #ffd700;
+        }
+
+        .modal p {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+
+        .modal .final-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00ff88;
+            margin: 20px 0;
+        }
+
+        .modal .btn {
+            margin-top: 20px;
+        }
+
+        .flag-hint {
+            background: rgba(255, 159, 67, 0.2);
+            border: 1px solid rgba(255, 159, 67, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            color: #ff9f43;
+        }
+
+        .flag-hint h3 {
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .flag-hint p {
+            font-size: 14px;
+            color: #ffcc80;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="game-title">🐍 貪食蛇踩地雷 💣</div>
+            <div class="score-panel">
+                <div class="score-box">
+                    <div class="score-label">當前分數</div>
+                    <div class="score-value" id="currentScore">0</div>
+                </div>
+                <div class="score-box high-score">
+                    <div class="score-label">最高分</div>
+                    <div class="score-value" id="highScore">0</div>
+                </div>
+                <div class="score-box mine-counter">
+                    <div class="score-label">💣 地雷</div>
+                    <div class="score-value" id="mineCount">0</div>
+                </div>
+                <div class="score-box flag-counter">
+                    <div class="score-label">🚩 旗標</div>
+                    <div class="score-value" id="flagCount">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        
+        <div class="controls">
+            <div class="speed-control">
+                <span class="speed-label">速度：</span>
+                <div class="speed-buttons">
+                    <button class="speed-btn" data-speed="slow">慢速</button>
+                    <button class="speed-btn active" data-speed="normal">正常</button>
+                    <button class="speed-btn" data-speed="fast">快速</button>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-pause" id="pauseBtn">⏸️ 暫停</button>
+                <button class="btn btn-restart" id="restartBtn">🔄 重新開始</button>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <div>
+                <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> 或 <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> 移動 | 
+                <kbd>空格</kbd> 暫停
+            </div>
+            <div>
+                <span class="highlight">🖱️ 左鍵點擊地雷</span> 放置/移除旗標 | 
+                💎 食物 +10分 | 
+                🚩 撞旗標地雷 +1分 | 
+                💣 撞未標記地雷 遊戲結束
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲結束彈窗 -->
+    <div class="overlay hidden" id="gameOverOverlay">
+        <div class="modal game-over">
+            <h2>💥 遊戲結束！</h2>
+            <p>你踩到未標記的地雷了！</p>
+            <div class="final-score" id="finalScore">0</div>
+            <p>分數</p>
+            <button class="btn btn-restart" id="gameOverRestartBtn">🔄 再玩一次</button>
+        </div>
+    </div>
+
+    <!-- 暫停彈窗 -->
+    <div class="overlay hidden" id="pauseOverlay">
+        <div class="modal paused">
+            <h2>⏸️ 遊戲暫停</h2>
+            <p>按空格鍵或點擊按鈕繼續</p>
+            <div class="flag-hint">
+                <h3>🚩 旗標提示</h3>
+                <p>• 用滑鼠左鍵點擊地雷放置旗標</p>
+                <p>• 被旗標標記的地雷是安全的</p>
+                <p>• 蛇撞到旗標地雷會消除它並得 1 分</p>
+            </div>
+            <button class="btn btn-pause" id="resumeBtn">▶️ 繼續遊戲</button>
+        </div>
+    </div>
+
+    <script>
+        // 遊戲配置（速度已調整為 0.5 倍，數值加倍 = 速度減半）
+        const CONFIG = {
+            GRID_SIZE: 20,
+            CANVAS_WIDTH: 600,
+            CANVAS_HEIGHT: 400,
+            SPEEDS: {
+                slow: 300,    // 原本 150，現在 300（0.5倍速）
+                normal: 200,  // 原本 100，現在 200（0.5倍速）
+                fast: 120     // 原本 60，現在 120（0.5倍速）
+            },
+            INITIAL_MINES: 3,
+            SCORE_PER_FOOD: 10,
+            SCORE_PER_FLAG_MINE: 1
+        };
+
+        // 遊戲狀態
+        const game = {
+            snake: [],
+            direction: { x: 1, y: 0 },
+            nextDirection: { x: 1, y: 0 },
+            food: null,
+            mines: [],  // { x, y, flagged }
+            score: 0,
+            highScore: parseInt(localStorage.getItem('snakeMineHighScore')) || 0,
+            speed: 'normal',
+            isPaused: false,
+            isGameOver: false,
+            gameLoop: null,
+            cols: CONFIG.CANVAS_WIDTH / CONFIG.GRID_SIZE,
+            rows: CONFIG.CANVAS_HEIGHT / CONFIG.GRID_SIZE
+        };
+
+        // DOM 元素
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const currentScoreEl = document.getElementById('currentScore');
+        const highScoreEl = document.getElementById('highScore');
+        const mineCountEl = document.getElementById('mineCount');
+        const flagCountEl = document.getElementById('flagCount');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const finalScoreEl = document.getElementById('finalScore');
+        const gameOverRestartBtn = document.getElementById('gameOverRestartBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const speedBtns = document.querySelectorAll('.speed-btn');
+
+        // 初始化遊戲
+        function initGame() {
+            // 初始化蛇（從中間開始，長度為3）
+            const startX = Math.floor(game.cols / 2);
+            const startY = Math.floor(game.rows / 2);
+            game.snake = [
+                { x: startX, y: startY },
+                { x: startX - 1, y: startY },
+                { x: startX - 2, y: startY }
+            ];
+            
+            game.direction = { x: 1, y: 0 };
+            game.nextDirection = { x: 1, y: 0 };
+            game.score = 0;
+            game.isPaused = false;
+            game.isGameOver = false;
+            game.mines = [];
+            
+            // 生成食物
+            spawnFood();
+            
+            // 生成初始地雷
+            for (let i = 0; i < CONFIG.INITIAL_MINES; i++) {
+                spawnMine();
+            }
+            
+            updateUI();
+            hideOverlays();
+            
+            // 開始遊戲循環
+            if (game.gameLoop) clearInterval(game.gameLoop);
+            game.gameLoop = setInterval(gameStep, CONFIG.SPEEDS[game.speed]);
+            
+            draw();
+        }
+
+        // 生成食物
+        function spawnFood() {
+            let newFood;
+            do {
+                newFood = {
+                    x: Math.floor(Math.random() * game.cols),
+                    y: Math.floor(Math.random() * game.rows)
+                };
+            } while (isOccupied(newFood));
+            game.food = newFood;
+        }
+
+        // 生成地雷
+        function spawnMine() {
+            let newMine;
+            let attempts = 0;
+            do {
+                newMine = {
+                    x: Math.floor(Math.random() * game.cols),
+                    y: Math.floor(Math.random() * game.rows),
+                    flagged: false
+                };
+                attempts++;
+            } while (isOccupied(newMine) && attempts < 100);
+            
+            if (attempts < 100) {
+                game.mines.push(newMine);
+            }
+        }
+
+        // 檢查位置是否被佔用
+        function isOccupied(pos) {
+            // 檢查蛇身
+            if (game.snake.some(segment => segment.x === pos.x && segment.y === pos.y)) {
+                return true;
+            }
+            // 檢查食物
+            if (game.food && game.food.x === pos.x && game.food.y === pos.y) {
+                return true;
+            }
+            // 檢查地雷
+            if (game.mines.some(mine => mine.x === pos.x && mine.y === pos.y)) {
+                return true;
+            }
+            return false;
+        }
+
+        // 遊戲主循環
+        function gameStep() {
+            if (game.isPaused || game.isGameOver) return;
+            
+            // 更新方向
+            game.direction = { ...game.nextDirection };
+            
+            // 計算新頭部位置（穿牆）
+            let newHead = {
+                x: (game.snake[0].x + game.direction.x + game.cols) % game.cols,
+                y: (game.snake[0].y + game.direction.y + game.rows) % game.rows
+            };
+            
+            // 檢查是否撞到自己
+            if (game.snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+                gameOver();
+                return;
+            }
+            
+            // 檢查是否踩到地雷
+            const mineIndex = game.mines.findIndex(mine => mine.x === newHead.x && mine.y === newHead.y);
+            if (mineIndex !== -1) {
+                const mine = game.mines[mineIndex];
+                if (mine.flagged) {
+                    // 踩到已標記的地雷，消除並得分
+                    game.mines.splice(mineIndex, 1);
+                    game.score += CONFIG.SCORE_PER_FLAG_MINE;
+                    updateUI();
+                } else {
+                    // 踩到未標記的地雷，遊戲結束
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // 移動蛇
+            game.snake.unshift(newHead);
+            
+            // 檢查是否吃到食物
+            if (newHead.x === game.food.x && newHead.y === game.food.y) {
+                game.score += CONFIG.SCORE_PER_FOOD;
+                spawnFood();
+                // 每吃一個食物增加地雷
+                spawnMine();
+                updateUI();
+            } else {
+                game.snake.pop();
+            }
+            
+            draw();
+        }
+
+        // 繪製遊戲
+        function draw() {
+            // 清除畫布
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 繪製網格
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= game.cols; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * CONFIG.GRID_SIZE, 0);
+                ctx.lineTo(x * CONFIG.GRID_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= game.rows; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * CONFIG.GRID_SIZE);
+                ctx.lineTo(canvas.width, y * CONFIG.GRID_SIZE);
+                ctx.stroke();
+            }
+            
+            // 繪製地雷
+            game.mines.forEach(mine => {
+                drawMine(mine.x, mine.y, mine.flagged);
+            });
+            
+            // 繪製食物
+            if (game.food) {
+                drawFood(game.food.x, game.food.y);
+            }
+            
+            // 繪製蛇
+            game.snake.forEach((segment, index) => {
+                drawSnakeSegment(segment.x, segment.y, index);
+            });
+        }
+
+        // 繪製蛇身段
+        function drawSnakeSegment(x, y, index) {
+            const padding = 2;
+            const size = CONFIG.GRID_SIZE - padding * 2;
+            const px = x * CONFIG.GRID_SIZE + padding;
+            const py = y * CONFIG.GRID_SIZE + padding;
+            
+            // 漸層顏色
+            const hue = 140 + (index * 2) % 40;
+            const saturation = 80 - (index * 2) % 30;
+            const lightness = 50 - (index * 1) % 20;
+            
+            if (index === 0) {
+                // 蛇頭
+                const gradient = ctx.createRadialGradient(
+                    px + size / 2, py + size / 2, 0,
+                    px + size / 2, py + size / 2, size / 2
+                );
+                gradient.addColorStop(0, '#00ff88');
+                gradient.addColorStop(1, '#00aa55');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(px, py, size, size, 8);
+                ctx.fill();
+                
+                // 眼睛
+                ctx.fillStyle = '#fff';
+                const eyeSize = 4;
+                const eyeOffset = 4;
+                
+                if (game.direction.x === 1) {
+                    ctx.beginPath();
+                    ctx.arc(px + size - eyeOffset, py + eyeOffset + 2, eyeSize, 0, Math.PI * 2);
+                    ctx.arc(px + size - eyeOffset, py + size - eyeOffset - 2, eyeSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (game.direction.x === -1) {
+                    ctx.beginPath();
+                    ctx.arc(px + eyeOffset, py + eyeOffset + 2, eyeSize, 0, Math.PI * 2);
+                    ctx.arc(px + eyeOffset, py + size - eyeOffset - 2, eyeSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (game.direction.y === -1) {
+                    ctx.beginPath();
+                    ctx.arc(px + eyeOffset + 2, py + eyeOffset, eyeSize, 0, Math.PI * 2);
+                    ctx.arc(px + size - eyeOffset - 2, py + eyeOffset, eyeSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(px + eyeOffset + 2, py + size - eyeOffset, eyeSize, 0, Math.PI * 2);
+                    ctx.arc(px + size - eyeOffset - 2, py + size - eyeOffset, eyeSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // 瞳孔
+                ctx.fillStyle = '#1a1a2e';
+                const pupilSize = 2;
+                if (game.direction.x === 1) {
+                    ctx.beginPath();
+                    ctx.arc(px + size - eyeOffset + 1, py + eyeOffset + 2, pupilSize, 0, Math.PI * 2);
+                    ctx.arc(px + size - eyeOffset + 1, py + size - eyeOffset - 2, pupilSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (game.direction.x === -1) {
+                    ctx.beginPath();
+                    ctx.arc(px + eyeOffset - 1, py + eyeOffset + 2, pupilSize, 0, Math.PI * 2);
+                    ctx.arc(px + eyeOffset - 1, py + size - eyeOffset - 2, pupilSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (game.direction.y === -1) {
+                    ctx.beginPath();
+                    ctx.arc(px + eyeOffset + 2, py + eyeOffset - 1, pupilSize, 0, Math.PI * 2);
+                    ctx.arc(px + size - eyeOffset - 2, py + eyeOffset - 1, pupilSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(px + eyeOffset + 2, py + size - eyeOffset + 1, pupilSize, 0, Math.PI * 2);
+                    ctx.arc(px + size - eyeOffset - 2, py + size - eyeOffset + 1, pupilSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                // 蛇身
+                const gradient = ctx.createRadialGradient(
+                    px + size / 2, py + size / 2, 0,
+                    px + size / 2, py + size / 2, size / 2
+                );
+                gradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${lightness + 15}%)`);
+                gradient.addColorStop(1, `hsl(${hue}, ${saturation}%, ${lightness}%)`);
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(px, py, size, size, 6);
+                ctx.fill();
+                
+                // 身體花紋
+                if (index % 3 === 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.beginPath();
+                    ctx.arc(px + size / 2, py + size / 2, size / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // 繪製食物
+        function drawFood(x, y) {
+            const centerX = x * CONFIG.GRID_SIZE + CONFIG.GRID_SIZE / 2;
+            const centerY = y * CONFIG.GRID_SIZE + CONFIG.GRID_SIZE / 2;
+            const size = CONFIG.GRID_SIZE / 2 - 2;
+            
+            // 發光效果
+            const glow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size * 2);
+            glow.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
+            glow.addColorStop(1, 'rgba(0, 212, 255, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, size * 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 食物本體（鑽石形狀）
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size);
+            gradient.addColorStop(0, '#00ffff');
+            gradient.addColorStop(0.5, '#00d4ff');
+            gradient.addColorStop(1, '#0099cc');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY - size);
+            ctx.lineTo(centerX + size, centerY);
+            ctx.lineTo(centerX, centerY + size);
+            ctx.lineTo(centerX - size, centerY);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 高光
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(centerX - 2, centerY - 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 繪製地雷
+        function drawMine(x, y, flagged) {
+            const centerX = x * CONFIG.GRID_SIZE + CONFIG.GRID_SIZE / 2;
+            const centerY = y * CONFIG.GRID_SIZE + CONFIG.GRID_SIZE / 2;
+            const size = CONFIG.GRID_SIZE / 2 - 3;
+            
+            if (flagged) {
+                // 已標記的地雷 - 綠色安全光暈
+                const glow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size * 1.8);
+                glow.addColorStop(0, 'rgba(0, 255, 136, 0.3)');
+                glow.addColorStop(1, 'rgba(0, 255, 136, 0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, size * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 地雷本體（變灰）
+                const gradient = ctx.createRadialGradient(centerX - 2, centerY - 2, 0, centerX, centerY, size);
+                gradient.addColorStop(0, '#666');
+                gradient.addColorStop(1, '#444');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 繪製旗標
+                const flagPoleX = centerX - 2;
+                const flagPoleTop = centerY - size - 2;
+                const flagPoleBottom = centerY + size / 2;
+                
+                // 旗桿
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(flagPoleX, flagPoleTop);
+                ctx.lineTo(flagPoleX, flagPoleBottom);
+                ctx.stroke();
+                
+                // 旗幟
+                ctx.fillStyle = '#ff9f43';
+                ctx.beginPath();
+                ctx.moveTo(flagPoleX, flagPoleTop);
+                ctx.lineTo(flagPoleX + 10, flagPoleTop + 5);
+                ctx.lineTo(flagPoleX, flagPoleTop + 10);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 旗幟邊框
+                ctx.strokeStyle = '#e17055';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+            } else {
+                // 未標記的地雷 - 危險紅色光暈
+                const glow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size * 1.5);
+                glow.addColorStop(0, 'rgba(255, 50, 50, 0.3)');
+                glow.addColorStop(1, 'rgba(255, 50, 50, 0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, size * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 地雷本體
+                const gradient = ctx.createRadialGradient(centerX - 2, centerY - 2, 0, centerX, centerY, size);
+                gradient.addColorStop(0, '#555');
+                gradient.addColorStop(1, '#222');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 尖刺
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        centerX + Math.cos(angle) * size * 0.7,
+                        centerY + Math.sin(angle) * size * 0.7
+                    );
+                    ctx.lineTo(
+                        centerX + Math.cos(angle) * size * 1.3,
+                        centerY + Math.sin(angle) * size * 1.3
+                    );
+                    ctx.stroke();
+                }
+                
+                // 高光
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(centerX - 3, centerY - 3, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 中心紅點
+                ctx.fillStyle = '#ff3333';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 處理滑鼠點擊 - 放置/移除旗標
+        canvas.addEventListener('click', (e) => {
+            if (game.isGameOver) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const clickX = Math.floor((e.clientX - rect.left) * scaleX / CONFIG.GRID_SIZE);
+            const clickY = Math.floor((e.clientY - rect.top) * scaleY / CONFIG.GRID_SIZE);
+            
+            // 檢查是否點擊到地雷
+            const mineIndex = game.mines.findIndex(mine => mine.x === clickX && mine.y === clickY);
+            
+            if (mineIndex !== -1) {
+                // 切換旗標狀態
+                game.mines[mineIndex].flagged = !game.mines[mineIndex].flagged;
+                updateUI();
+                draw();
+            }
+        });
+
+        // 遊戲結束
+        function gameOver() {
+            game.isGameOver = true;
+            clearInterval(game.gameLoop);
+            
+            // 更新最高分
+            if (game.score > game.highScore) {
+                game.highScore = game.score;
+                localStorage.setItem('snakeMineHighScore', game.highScore);
+            }
+            
+            finalScoreEl.textContent = game.score;
+            gameOverOverlay.classList.remove('hidden');
+            updateUI();
+        }
+
+        // 暫停/繼續遊戲
+        function togglePause() {
+            if (game.isGameOver) return;
+            
+            game.isPaused = !game.isPaused;
+            
+            if (game.isPaused) {
+                pauseBtn.textContent = '▶️ 繼續';
+                pauseOverlay.classList.remove('hidden');
+            } else {
+                pauseBtn.textContent = '⏸️ 暫停';
+                pauseOverlay.classList.add('hidden');
+            }
+        }
+
+        // 更新UI
+        function updateUI() {
+            currentScoreEl.textContent = game.score;
+            highScoreEl.textContent = game.highScore;
+            mineCountEl.textContent = game.mines.filter(m => !m.flagged).length;
+            flagCountEl.textContent = game.mines.filter(m => m.flagged).length;
+        }
+
+        // 隱藏所有彈窗
+        function hideOverlays() {
+            gameOverOverlay.classList.add('hidden');
+            pauseOverlay.classList.add('hidden');
+            pauseBtn.textContent = '⏸️ 暫停';
+        }
+
+        // 設置速度
+        function setSpeed(speed) {
+            game.speed = speed;
+            speedBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.speed === speed);
+            });
+            
+            if (game.gameLoop) {
+                clearInterval(game.gameLoop);
+                game.gameLoop = setInterval(gameStep, CONFIG.SPEEDS[speed]);
+            }
+        }
+
+        // 鍵盤控制
+        document.addEventListener('keydown', (e) => {
+            // 防止方向鍵滾動頁面
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+            
+            // 暫停
+            if (e.key === ' ') {
+                togglePause();
+                return;
+            }
+            
+            if (game.isPaused || game.isGameOver) return;
+            
+            // 方向控制（防止反向移動）
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    if (game.direction.y !== 1) {
+                        game.nextDirection = { x: 0, y: -1 };
+                    }
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    if (game.direction.y !== -1) {
+                        game.nextDirection = { x: 0, y: 1 };
+                    }
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    if (game.direction.x !== 1) {
+                        game.nextDirection = { x: -1, y: 0 };
+                    }
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    if (game.direction.x !== -1) {
+                        game.nextDirection = { x: 1, y: 0 };
+                    }
+                    break;
+            }
+        });
+
+        // 按鈕事件
+        pauseBtn.addEventListener('click', togglePause);
+        restartBtn.addEventListener('click', initGame);
+        gameOverRestartBtn.addEventListener('click', initGame);
+        resumeBtn.addEventListener('click', togglePause);
+
+        speedBtns.forEach(btn => {
+            btn.addEventListener('click', () => setSpeed(btn.dataset.speed));
+        });
+
+        // 初始化
+        highScoreEl.textContent = game.highScore;
+        initGame();
+    </script>
+</body>
+</html>
