@@ -267,6 +267,28 @@
             font-weight: bold;
         }
 
+        /* 計時器樣式 */
+        .timer-display {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .timer-display .timer-label {
+            color: #aaa;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .timer-display .timer-value {
+            color: #00d4ff;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
         .overlay {
             position: fixed;
             top: 0;
@@ -349,7 +371,7 @@
 <body>
     <div class="game-container">
         <div class="game-header">
-            <div class="game-title">🐍 貪食蛇踩地雷 💣</div>
+            <div class="game-title">🐍 一哥踩爆地雷貪食蛇 💣</div>
             <div class="score-panel">
                 <div class="score-box">
                     <div class="score-label">當前分數</div>
@@ -409,6 +431,11 @@
                 🚩 撞旗標地雷 +1分 | 
                 💣 撞未標記地雷 遊戲結束
             </div>
+            <!-- 計時器顯示 -->
+            <div class="timer-display">
+                <div class="timer-label">⏱️ 一哥自 2026年01月07日起</div>
+                <div class="timer-value" id="elapsedTimer">剪輯已耗時：0天0小時0分鐘0秒</div>
+            </div>
         </div>
     </div>
 
@@ -454,6 +481,36 @@
             SCORE_PER_FLAG_MINE: 10,
             BACKGROUND_OPACITY: 0.7  // 預設背景遮罩透明度
         };
+
+        // 計時器功能 - 從2026年01月07日開始正數計時
+        const startDate = new Date('2026-01-07T00:00:00');
+        const elapsedTimerEl = document.getElementById('elapsedTimer');
+
+        function updateElapsedTimer() {
+            const now = new Date();
+            const diff = now - startDate;
+            
+            // 如果還沒到開始日期，顯示負數或等待
+            if (diff < 0) {
+                const absDiff = Math.abs(diff);
+                const days = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((absDiff % (1000 * 60)) / 1000);
+                elapsedTimerEl.textContent = `距離開始還有：${days}天${hours}小時${minutes}分鐘${seconds}秒`;
+            } else {
+                // 計算已過時間
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                elapsedTimerEl.textContent = `已耗時：${days}天${hours}小時${minutes}分鐘${seconds}秒`;
+            }
+        }
+
+        // 每秒更新計時器
+        updateElapsedTimer();
+        setInterval(updateElapsedTimer, 1000);
 
         // 遊戲狀態
         const game = {
