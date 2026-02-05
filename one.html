@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>🐍 貪食蛇踩地雷 💣</title>
     <style>
         * {
@@ -19,6 +19,9 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            /* 防止手機上的拉動刷新 */
+            overscroll-behavior: none;
+            touch-action: manipulation;
         }
 
         .game-container {
@@ -28,6 +31,7 @@
             padding: 30px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 100%;
         }
 
         .game-header {
@@ -95,6 +99,38 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+            max-width: 100%;
+            /* 防止觸控時選取或拖曳 */
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* 響應式畫布 */
+        @media (max-width: 650px) {
+            .canvas-container {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 3 / 2;
+            }
+            
+            .game-title {
+                font-size: 20px;
+            }
+            
+            .score-box {
+                padding: 8px 10px;
+                min-width: 60px;
+            }
+            
+            .score-value {
+                font-size: 18px;
+            }
+            
+            .game-container {
+                padding: 15px;
+            }
         }
 
         /* 背景圖片層 */
@@ -115,8 +151,11 @@
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 2;
             cursor: crosshair;
+            touch-action: none;
         }
 
         .controls {
@@ -267,6 +306,69 @@
             font-weight: bold;
         }
 
+        /* 手機觸控提示 */
+        .touch-info {
+            color: #00d4ff;
+            margin-top: 10px;
+        }
+
+        /* 虛擬方向鍵 */
+        .touch-controls {
+            display: none;
+            justify-content: center;
+            margin-top: 20px;
+            touch-action: manipulation;
+        }
+
+        @media (max-width: 768px), (pointer: coarse) {
+            .touch-controls {
+                display: flex;
+            }
+            
+            .game-info kbd {
+                display: none;
+            }
+        }
+
+        .d-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+        }
+
+        .d-pad-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .d-pad-btn:active {
+            background: linear-gradient(45deg, #00ff88, #00d4ff);
+            transform: scale(0.95);
+        }
+
+        .d-pad-btn.empty {
+            background: transparent;
+            pointer-events: none;
+        }
+
+        .d-pad-center {
+            background: rgba(255, 159, 67, 0.3);
+            font-size: 16px;
+        }
+
         /* 計時器樣式 */
         .timer-display {
             margin-top: 15px;
@@ -366,6 +468,27 @@
             color: #ffcc80;
             margin: 5px 0;
         }
+
+        /* 滑動提示區域 */
+        .swipe-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 20px 30px;
+            border-radius: 15px;
+            font-size: 18px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+
+        .swipe-hint.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -393,9 +516,10 @@
         </div>
         
         <!-- 遊戲畫布容器 -->
-        <div class="canvas-container">
+        <div class="canvas-container" id="canvasContainer">
             <div class="background-image"></div>
             <canvas id="gameCanvas" width="600" height="400"></canvas>
+            <div class="swipe-hint" id="swipeHint">👆 滑動控制方向</div>
         </div>
 
         <!-- 透明度控制 -->
@@ -419,6 +543,21 @@
                 <button class="btn btn-restart" id="restartBtn">🔄 重新開始</button>
             </div>
         </div>
+
+        <!-- 虛擬方向鍵 (手機用) -->
+        <div class="touch-controls">
+            <div class="d-pad">
+                <div class="d-pad-btn empty"></div>
+                <button class="d-pad-btn" id="btnUp">⬆️</button>
+                <div class="d-pad-btn empty"></div>
+                <button class="d-pad-btn" id="btnLeft">⬅️</button>
+                <button class="d-pad-btn d-pad-center" id="btnFlag">🚩</button>
+                <button class="d-pad-btn" id="btnRight">➡️</button>
+                <div class="d-pad-btn empty"></div>
+                <button class="d-pad-btn" id="btnDown">⬇️</button>
+                <div class="d-pad-btn empty"></div>
+            </div>
+        </div>
         
         <div class="game-info">
             <div>
@@ -428,8 +567,11 @@
             <div>
                 <span class="highlight">🖱️ 左鍵點擊地雷</span> 放置/移除旗標 | 
                 💎 食物 +10分 | 
-                🚩 撞旗標地雷 +10分 | 
+                🚩 撞旗標地雷 +1分 | 
                 💣 撞未標記地雷 遊戲結束
+            </div>
+            <div class="touch-info">
+                📱 手機操作：<strong>滑動畫面</strong> 控制方向 | <strong>點擊地雷</strong> 放置旗標
             </div>
             <!-- 計時器顯示 -->
             <div class="timer-display">
@@ -458,6 +600,7 @@
             <div class="flag-hint">
                 <h3>🚩 旗標提示</h3>
                 <p>• 用滑鼠左鍵點擊地雷放置旗標</p>
+                <p>• 📱 手機：滑動控制方向，點擊地雷放旗標</p>
                 <p>• 被旗標標記的地雷是安全的</p>
                 <p>• 蛇撞到旗標地雷會消除它並得 10 分</p>
             </div>
@@ -465,6 +608,9 @@
         </div>
     </div>
 
+    <!-- 引入 Hammer.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js%22%3E%3C/script%3E
+    
     <script>
         // 遊戲配置（速度已調整為 0.5 倍）
         const CONFIG = {
@@ -533,6 +679,7 @@
         // DOM 元素
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvasContainer');
         const currentScoreEl = document.getElementById('currentScore');
         const highScoreEl = document.getElementById('highScore');
         const mineCountEl = document.getElementById('mineCount');
@@ -547,6 +694,14 @@
         const speedBtns = document.querySelectorAll('.speed-btn');
         const opacitySlider = document.getElementById('opacitySlider');
         const opacityValue = document.getElementById('opacityValue');
+        const swipeHint = document.getElementById('swipeHint');
+
+        // 虛擬方向鍵
+        const btnUp = document.getElementById('btnUp');
+        const btnDown = document.getElementById('btnDown');
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnFlag = document.getElementById('btnFlag');
 
         // 初始化遊戲
         function initGame() {
@@ -965,17 +1120,23 @@
             }
         }
 
-        // 滑鼠點擊處理
-        canvas.addEventListener('click', (e) => {
-            if (game.isGameOver) return;
-            
+        // 取得畫布座標（支援響應式）
+        function getCanvasCoordinates(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
             
-            const clickX = Math.floor((e.clientX - rect.left) * scaleX / CONFIG.GRID_SIZE);
-            const clickY = Math.floor((e.clientY - rect.top) * scaleY / CONFIG.GRID_SIZE);
+            const clickX = Math.floor((clientX - rect.left) * scaleX / CONFIG.GRID_SIZE);
+            const clickY = Math.floor((clientY - rect.top) * scaleY / CONFIG.GRID_SIZE);
             
+            return { clickX, clickY };
+        }
+
+        // 處理點擊/觸控放旗標
+        function handleFlagPlacement(clientX, clientY) {
+            if (game.isGameOver) return;
+            
+            const { clickX, clickY } = getCanvasCoordinates(clientX, clientY);
             const mineIndex = game.mines.findIndex(mine => mine.x === clickX && mine.y === clickY);
             
             if (mineIndex !== -1) {
@@ -983,7 +1144,137 @@
                 updateUI();
                 draw();
             }
+        }
+
+        // 滑鼠點擊處理
+        canvas.addEventListener('click', (e) => {
+            handleFlagPlacement(e.clientX, e.clientY);
         });
+
+        // =====================
+        // 觸控操作 - 使用 Hammer.js
+        // =====================
+        
+        // 初始化 Hammer.js
+        const hammer = new Hammer(canvasContainer);
+        
+        // 設定滑動識別器支援所有方向
+        hammer.get('swipe').set({ 
+            direction: Hammer.DIRECTION_ALL,
+            threshold: 10,
+            velocity: 0.3
+        });
+        
+        // 設定點擊識別器
+        hammer.get('tap').set({
+            taps: 1
+        });
+
+        // 滑動控制方向
+        hammer.on('swipeleft', () => {
+            if (game.isPaused || game.isGameOver) return;
+            if (game.direction.x !== 1) {
+                game.nextDirection = { x: -1, y: 0 };
+                showSwipeHint('⬅️');
+            }
+        });
+
+        hammer.on('swiperight', () => {
+            if (game.isPaused || game.isGameOver) return;
+            if (game.direction.x !== -1) {
+                game.nextDirection = { x: 1, y: 0 };
+                showSwipeHint('➡️');
+            }
+        });
+
+        hammer.on('swipeup', () => {
+            if (game.isPaused || game.isGameOver) return;
+            if (game.direction.y !== 1) {
+                game.nextDirection = { x: 0, y: -1 };
+                showSwipeHint('⬆️');
+            }
+        });
+
+        hammer.on('swipedown', () => {
+            if (game.isPaused || game.isGameOver) return;
+            if (game.direction.y !== -1) {
+                game.nextDirection = { x: 0, y: 1 };
+                showSwipeHint('⬇️');
+            }
+        });
+
+        // 點擊放旗標
+        hammer.on('tap', (e) => {
+            const touch = e.center;
+            handleFlagPlacement(touch.x, touch.y);
+        });
+
+        // 顯示滑動方向提示
+        function showSwipeHint(direction) {
+            swipeHint.textContent = direction;
+            swipeHint.classList.add('show');
+            setTimeout(() => {
+                swipeHint.classList.remove('show');
+            }, 200);
+        }
+
+        // =====================
+        // 虛擬方向鍵控制
+        // =====================
+        
+        function setupDPadButton(btn, dirX, dirY, oppositeX, oppositeY) {
+            const handlePress = (e) => {
+                e.preventDefault();
+                if (game.isPaused || game.isGameOver) return;
+                if (game.direction.x !== oppositeX || game.direction.y !== oppositeY) {
+                    game.nextDirection = { x: dirX, y: dirY };
+                }
+            };
+            
+            btn.addEventListener('touchstart', handlePress, { passive: false });
+            btn.addEventListener('mousedown', handlePress);
+        }
+
+        setupDPadButton(btnUp, 0, -1, 0, 1);
+        setupDPadButton(btnDown, 0, 1, 0, -1);
+        setupDPadButton(btnLeft, -1, 0, 1, 0);
+        setupDPadButton(btnRight, 1, 0, -1, 0);
+
+        // 中間旗標按鈕 - 標記蛇頭前方的地雷
+        btnFlag.addEventListener('touchstart', flagNearestMine, { passive: false });
+        btnFlag.addEventListener('mousedown', flagNearestMine);
+
+        function flagNearestMine(e) {
+            e.preventDefault();
+            if (game.isGameOver) return;
+            
+            // 計算蛇頭前方位置
+            const headX = game.snake[0].x + game.direction.x;
+            const headY = game.snake[0].y + game.direction.y;
+            
+            // 找最近的未標記地雷
+            let nearestMine = null;
+            let minDist = Infinity;
+            
+            game.mines.forEach((mine, index) => {
+                const dist = Math.abs(mine.x - headX) + Math.abs(mine.y - headY);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestMine = index;
+                }
+            });
+            
+            if (nearestMine !== null && minDist <= 5) {
+                game.mines[nearestMine].flagged = !game.mines[nearestMine].flagged;
+                updateUI();
+                draw();
+            }
+        }
+
+        // 防止觸控時頁面滾動
+        canvasContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
 
         // 透明度滑桿處理
         opacitySlider.addEventListener('input', (e) => {
