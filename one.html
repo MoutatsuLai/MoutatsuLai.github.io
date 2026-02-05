@@ -428,7 +428,7 @@
             <div>
                 <span class="highlight">🖱️ 左鍵點擊地雷</span> 放置/移除旗標 | 
                 💎 食物 +10分 | 
-                🚩 撞旗標地雷 +1分 | 
+                🚩 撞旗標地雷 +10分 | 
                 💣 撞未標記地雷 遊戲結束
             </div>
             <!-- 計時器顯示 -->
@@ -442,11 +442,11 @@
     <!-- 遊戲結束彈窗 -->
     <div class="overlay hidden" id="gameOverOverlay">
         <div class="modal game-over">
-            <h2>💥 遊戲結束！</h2>
-            <p>你踩到未標記的地雷了！</p>
+            <h2>💥 你被問爆！</h2>
+            <p>你被一哥問爆了！</p>
             <div class="final-score" id="finalScore">0</div>
             <p>分數</p>
-            <button class="btn btn-restart" id="gameOverRestartBtn">🔄 再玩一次</button>
+            <button class="btn btn-restart" id="gameOverRestartBtn">🔄 再爆一次</button>
         </div>
     </div>
 
@@ -459,7 +459,7 @@
                 <h3>🚩 旗標提示</h3>
                 <p>• 用滑鼠左鍵點擊地雷放置旗標</p>
                 <p>• 被旗標標記的地雷是安全的</p>
-                <p>• 蛇撞到旗標地雷會消除它並得 1 分</p>
+                <p>• 蛇撞到旗標地雷會消除它並得 10 分</p>
             </div>
             <button class="btn btn-pause" id="resumeBtn">▶️ 繼續遊戲</button>
         </div>
